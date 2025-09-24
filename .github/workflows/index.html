@@ -1,0 +1,2909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MW3 PFM System - Project Financial Management</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* General Setup */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --info: #0284c7;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            padding: 8px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .mobile-menu-btn span {
+            display: block;
+            width: 24px;
+            height: 3px;
+            background: white;
+            border-radius: 3px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: center;
+        }
+        
+        .mobile-menu-btn.open span:nth-child(1) {
+            transform: translateY(8px) rotate(45deg);
+        }
+        
+        .mobile-menu-btn.open span:nth-child(2) {
+            opacity: 0;
+            transform: scale(0);
+        }
+        
+        .mobile-menu-btn.open span:nth-child(3) {
+            transform: translateY(-8px) rotate(-45deg);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            padding: 1.5rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+        .logo p {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--gray-700);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.75rem;
+            opacity: 0.8;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+            background: var(--gray-50);
+            min-width: 0;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .header h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Cards */
+        .glass-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Buttons & Loading State */
+        .btn {
+            padding: 0.625rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            text-decoration: none;
+            min-height: 36px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn.loading {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        .btn.loading:after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .btn-warning:hover {
+            background: #fde68a;
+        }
+        .btn-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            min-height: 30px;
+        }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 6px;
+            min-height: 32px;
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .kpi-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .kpi-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            animation: floatBounce 4s ease-in-out infinite;
+        }
+        .kpi-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+        .kpi-label {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .kpi-change {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .kpi-change.positive {
+            background: var(--success);
+            color: white;
+        }
+        .kpi-change.negative {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .activity-feed-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: .75rem 0;
+            border-bottom: 1px solid var(--gray-100);
+            gap: 1rem;
+        }
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        .activity-desc {
+            font-size: .875rem;
+            color: var(--gray-800);
+            flex: 1;
+        }
+        .activity-date {
+            font-size: .75rem;
+            color: var(--gray-500);
+        }
+
+        .health-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: .5rem;
+            flex-shrink: 0;
+        }
+        .health-green { background-color: var(--success); }
+        .health-yellow { background-color: var(--warning); }
+        .health-red { background-color: var(--danger); }
+
+        /* Tables */
+        .table-container {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .table-header {
+            padding: 1.5rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .table-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        .table-subtitle {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        .data-table th {
+            background: var(--gray-50);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--gray-100);
+            color: var(--gray-900);
+            font-size: 0.875rem;
+            vertical-align: top;
+        }
+        .data-table tbody tr:hover {
+            background: var(--gray-50);
+        }
+        .amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+        .amount.positive {
+            color: var(--success);
+        }
+        .amount.negative {
+            color: var(--danger);
+        }
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: var(--success);
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.5s ease;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .modal-close:hover {
+            color: var(--gray-700);
+            background: var(--gray-100);
+        }
+        .modal-footer {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--gray-700);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .form-label:has(+ .form-input[required]):after,
+        .form-label:has(+ .form-select[required]):after {
+            content: ' *';
+            color: var(--danger);
+        }
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .form-select {
+            cursor: pointer;
+        }
+        
+        /* Page Sections */
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem 1.5rem;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            color: var(--gray-900);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 3000;
+            min-width: 300px;
+            max-width: 400px;
+        }
+        .toast.show {
+            display: block;
+            animation: slideInRight 0.3s ease;
+        }
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+        .toast.info {
+            border-left: 4px solid var(--info);
+        }
+        .toast-content {
+            display: flex;
+            align-items: center;
+            word-wrap: break-word;
+        }
+        .toast-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--gray-400);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        /* Chart Grid Display */
+        .chart-grid {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .chart-header {
+            margin-bottom: 1.5rem;
+        }
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        .chart-subtitle {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .data-point {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .data-point:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .data-point-month {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .data-point-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .data-point-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-bottom: 0.5rem;
+        }
+        .data-point-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--gray-200);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .data-point-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.8s ease;
+        }
+        .positive-flow {
+            color: var(--success);
+        }
+        .negative-flow {
+            color: var(--danger);
+        }
+        .neutral-flow {
+            color: var(--gray-500);
+        }
+        .positive-fill {
+            background: var(--success);
+        }
+        .negative-fill {
+            background: var(--danger);
+        }
+        .neutral-fill {
+            background: var(--gray-400);
+        }
+
+        /* Summary Cards */
+        .chart-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+        }
+        .summary-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Expandable rows */
+        .expandable-row {
+            cursor: pointer;
+        }
+        .expandable-row:hover {
+            background: var(--gray-50);
+        }
+        .expandable-row td:first-child::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 0.5rem;
+            transition: transform 0.2s ease;
+            color: var(--gray-400);
+        }
+        .expandable-row.expanded td:first-child::before {
+            transform: rotate(90deg);
+        }
+        .vendor-details {
+            display: none;
+        }
+        .vendor-details.show {
+            display: table-row;
+        }
+        .vendor-details td {
+            background: var(--gray-50);
+            border-top: none;
+        }
+
+        /* Report Grid */
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .report-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .report-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-100);
+            gap: 1rem;
+        }
+        .report-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .report-label {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            flex: 1;
+        }
+        .report-value {
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        /* Animations */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes floatBounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .data-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+            .chart-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .report-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: flex;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-top: 4rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            
+            .header-actions {
+                justify-content: flex-end;
+                flex-wrap: wrap;
+            }
+            
+            .data-table {
+                min-width: 500px;
+            }
+            
+            .data-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 0.75rem;
+            }
+            
+            .chart-grid {
+                padding: 1rem;
+            }
+            
+            .chart-summary {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            .modal-content {
+                padding: 1.5rem;
+                margin: 0.5rem;
+                max-width: calc(100vw - 1rem);
+            }
+            
+            .toast {
+                right: 0.5rem;
+                left: 0.5rem;
+                min-width: auto;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-content {
+                padding: 0.75rem;
+                padding-top: 3.5rem;
+            }
+            
+            .header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .kpi-value {
+                font-size: 1.5rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
+            
+            .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            
+            .data-table thead {
+                display: none;
+            }
+            
+            .data-table,
+            .data-table tbody,
+            .data-table tr,
+            .data-table td {
+                display: block;
+                width: 100%;
+            }
+            
+            .data-table tbody tr {
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                padding: 1rem;
+            }
+            
+            .data-table td {
+                border: none;
+                padding: 0.25rem 0;
+                text-align: left;
+            }
+            
+            .data-table td:before {
+                content: attr(data-label) ": ";
+                font-weight: 600;
+                color: var(--gray-700);
+                display: inline-block;
+                min-width: 80px;
+            }
+            
+            .data-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .data-point {
+                padding: 0.75rem;
+            }
+            
+            .data-point-value {
+                font-size: 1rem;
+            }
+        }
+
+        /* Action button styles */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        /* Clear All Data Button Special Styling */
+        .btn-clear-all {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: 2px solid #dc2626;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-clear-all:hover {
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            border-color: #b91c1c;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-clear-all:before {
+            content: '⚠️';
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" id="mobile-menu-btn">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <h1>PFM</h1>
+                <p>Enterprise Financial System</p>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-page="dashboard">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="projects">
+                            <span class="nav-icon">📋</span>
+                            <span class="nav-text">Projects</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="transactions">
+                            <span class="nav-icon">💳</span>
+                            <span class="nav-text">Transactions</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="vendors">
+                            <span class="nav-icon">👥</span>
+                            <span class="nav-text">Vendors</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="reports">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Reports</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div class="page-section active" id="dashboard">
+                <div class="header">
+                    <h2>Executive Dashboard</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="refreshDashboard()">
+                            🔄 Refresh
+                        </button>
+                        <button class="btn btn-clear-all" onclick="clearAllData()">
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #e0f2fe; color: #0284c7;">💰</div>
+                        <div class="kpi-value" id="kpi-revenue">৳0</div>
+                        <div class="kpi-label">Total Revenue</div>
+                        <span class="kpi-change positive">Active</span>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #fee2e2; color: #dc2626;">📉</div>
+                        <div class="kpi-value" id="kpi-expenses">৳0</div>
+                        <div class="kpi-label">Total Expenses</div>
+                        <span class="kpi-change negative" id="kpi-expense-percentage">0%</span>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #dcfce7; color: #059669;">📈</div>
+                        <div class="kpi-value" id="kpi-net-profit">৳0</div>
+                        <div class="kpi-label">Net Profit</div>
+                        <span class="kpi-change positive" id="kpi-profit-margin">0%</span>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #e0e7ff; color: #4338ca;">💼</div>
+                        <div class="kpi-value" id="kpi-receivable">৳1,00,000</div>
+                        <div class="kpi-label">Receivable to Client</div>
+                        <span class="kpi-change" style="background-color: var(--info); color: white;">Due</span>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #fef3c7; color: #d97706;">⏰</div>
+                        <div class="kpi-value" id="kpi-payable">৳0</div>
+                        <div class="kpi-label">Payable to Vendor</div>
+                        <span class="kpi-change negative">Pending</span>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #ede9fe; color: #7c3aed;">⚖️</div>
+                        <div class="kpi-value" id="kpi-final-profit">৳0</div>
+                        <div class="kpi-label">Profit After Settlement</div>
+                        <span class="kpi-change" style="background-color: var(--dark); color: white;">Final</span>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-main">
+                        <!-- Chart Grid Display -->
+                        <div class="chart-grid">
+                            <div class="chart-header">
+                                <h3 class="chart-title">Cumulative Profit Over Time</h3>
+                                <p class="chart-subtitle">Running total of revenue minus expenses.</p>
+                            </div>
+                            <canvas id="profit-line-chart"></canvas>
+                        </div>
+                        <!-- Quick Stats -->
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h3 class="table-title">Project Quick View</h3>
+                                <p class="table-subtitle">Current project status and metrics</p>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Project</th>
+                                            <th>Budget</th>
+                                            <th>Spent</th>
+                                            <th>Progress</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboardProjectTable">
+                                        <!-- Projects will be populated here by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-sidebar">
+                         <div class="chart-grid">
+                             <div class="chart-header">
+                                <h3 class="chart-title">Expense Breakdown</h3>
+                                <p class="chart-subtitle">Spending by category.</p>
+                            </div>
+                            <canvas id="expense-donut-chart"></canvas>
+                        </div>
+                        <div class="activity-feed-card">
+                             <div class="chart-header">
+                                <h3 class="table-title">Recent Activity</h3>
+                                <p class="table-subtitle">Last 5 transactions</p>
+                            </div>
+                            <div id="recent-activity-feed"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Page -->
+            <div class="page-section" id="projects">
+                <div class="header">
+                    <h2>Project Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showModal('projectModal')">
+                            + New Project
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">All Projects</h3>
+                        <p class="table-subtitle">Comprehensive project overview</p>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Project Name</th>
+                                    <th>Client</th>
+                                    <th>Budget</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectTableBody">
+                                <!-- Projects will be populated here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Page -->
+            <div class="page-section" id="transactions">
+                <div class="header">
+                    <h2>Transaction Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showModal('transactionModal')">
+                            + New Transaction
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">All Transactions</h3>
+                        <p class="table-subtitle">Complete transaction history with filters</p>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Particulars</th>
+                                    <th>Type</th>
+                                    <th>Reference</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTableBody">
+                                <!-- Transactions will be populated here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendors Page -->
+            <div class="page-section" id="vendors">
+                <div class="header">
+                    <h2>Vendor Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showModal('vendorModal')">
+                            + New Vendor
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Vendor Details with Breakdown</h3>
+                        <p class="table-subtitle">Click on vendor to see detailed breakdown</p>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Vendor Name</th>
+                                    <th>Contract Amount</th>
+                                    <th>Total Paid</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendorTableBody">
+                                <!-- Vendors will be populated here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div class="page-section" id="reports">
+              <div class="header">
+                <h2>Financial Reports</h2>
+                <div class="header-actions">
+                  <input type="date" id="repFrom" class="form-input" aria-label="From date">
+                  <input type="date" id="repTo" class="form-input" aria-label="To date">
+                  <select id="repPreset" class="form-select" aria-label="Quick date preset">
+                    <option value="">Preset</option>
+                    <option value="mtd">MTD</option>
+                    <option value="qtd">QTD</option>
+                    <option value="ytd">YTD</option>
+                    <option value="last30">Last 30 days</option>
+                    <option value="last90">Last 90 days</option>
+                    <option value="fy">This Fiscal Year</option>
+                  </select>
+                  <select id="repMonth" class="form-select" aria-label="Month filter">
+                    <option value="">All Months</option>
+                  </select>
+                  <select id="repProject" class="form-select" aria-label="Project filter">
+                    <option value="">All Projects</option>
+                  </select>
+                  <select id="repType" class="form-select" aria-label="Type filter">
+                    <option value="">All Types</option>
+                    <option value="revenue">Revenue</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                  <button class="btn btn-secondary" id="repApplyBtn">Apply</button>
+                  <button class="btn btn-success" id="repExportCSV">Export CSV</button>
+                  <button class="btn btn-success" id="repExportJSON">Export JSON</button>
+                </div>
+              </div>
+            
+              <!-- Report Cards -->
+              <div class="report-grid">
+                <div class="report-card">
+                  <h4>Profit &amp; Loss (Filtered)</h4>
+                  <div class="report-item"><span class="report-label">Revenue</span><span class="report-value amount positive" id="plRevenue">৳0</span></div>
+                  <div class="report-item"><span class="report-label">Expenses</span><span class="report-value amount negative" id="plExpenses">৳0</span></div>
+                  <div class="report-item"><span class="report-label">Net Profit</span><span class="report-value amount" id="plNet">৳0</span></div>
+                  <div class="report-item"><span class="report-label">Net Margin</span><span class="report-value" id="plMargin">0%</span></div>
+                </div>
+            
+                <div class="report-card">
+                  <h4>Project Profitability</h4>
+                  <div id="projectProfitabilityList" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            
+                <div class="report-card">
+                  <h4>Vendor Exposure (AP)</h4>
+                  <div id="vendorExposureList" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            
+                <div class="report-card">
+                  <h4>Cash Flow Summary</h4>
+                  <div class="report-item"><span class="report-label">Cash Received</span><span class="report-value amount positive" id="cfReceived">৳0</span></div>
+                  <div class="report-item"><span class="report-label">Cash Paid</span><span class="report-value amount negative" id="cfPaid">৳0</span></div>
+                  <div class="report-item"><span class="report-label">Net Cash Flow</span><span class="report-value" id="cfNetFlow">৳0</span></div>
+                </div>
+              </div>
+            
+              <!-- Monthly Summary Table -->
+              <div class="table-container">
+                <div class="table-header">
+                  <h3 class="table-title">Monthly Financial Summary (Filtered)</h3>
+                  <p class="table-subtitle">Month-wise revenue, expense & net</p>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table" id="tblMonthly">
+                      <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net</th></tr></thead>
+                      <tbody></tbody>
+                    </table>
+                </div>
+              </div>
+            
+              <!-- Transactions Table -->
+              <div class="table-container">
+                <div class="table-header">
+                  <h3 class="table-title">Transaction Detail (Filtered)</h3>
+                  <p class="table-subtitle">Use header filters to narrow down</p>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table" id="tblTx">
+                      <thead>
+                        <tr>
+                          <th>Date</th><th>Type</th><th>Project</th>
+                          <th>Vendor</th><th>Category</th><th>Description</th><th>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                </div>
+              </div>
+              
+              <!-- KPI Grid -->
+              <div class="kpi-grid" id="repKpiGrid">
+                <div class="kpi-card"><div class="kpi-icon" style="background:#e0f2fe;color:#0284c7;">💰</div><div class="kpi-value" id="rkpiRevenue">৳0</div><div class="kpi-label">Revenue (filtered)</div></div>
+                <div class="kpi-card"><div class="kpi-icon" style="background:#fee2e2;color:#dc2626;">📉</div><div class="kpi-value" id="rkpiExpenses">৳0</div><div class="kpi-label">Expenses (filtered)</div></div>
+                <div class="kpi-card"><div class="kpi-icon" style="background:#dcfce7;color:#059669;">📈</div><div class="kpi-value" id="rkpiNet">৳0</div><div class="kpi-label">Net (filtered)</div></div>
+                <div class="kpi-card"><div class="kpi-icon" style="background:#e0e7ff;color:#4338ca;">💼</div><div class="kpi-value" id="rkpiAR">৳0</div><div class="kpi-label">Receivable (AR)</div></div>
+                <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7;color:#d97706;">⏰</div><div class="kpi-value" id="rkpiAP">৳0</div><div class="kpi-label">Payable (AP)</div></div>
+                <div class="kpi-card"><div class="kpi-icon" style="background:#f0fdf4;color:#15803d;">✅</div><div class="kpi-value" id="rkpiFinalProfit">৳0</div><div class="kpi-label">Profit After Final Settlement</div></div>
+              </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Project</h3>
+                <button class="modal-close" onclick="closeModal('projectModal')">&times;</button>
+            </div>
+            <form id="projectForm" onsubmit="event.preventDefault(); handleProjectSubmit(this);">
+                <div class="form-group">
+                    <label class="form-label">Project Name</label>
+                    <input type="text" name="name" class="form-input" placeholder="e.g., AKCL Office Renovation" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Client</label>
+                    <input type="text" name="client" class="form-input" placeholder="e.g., AKCL Limited" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Type</label>
+                    <select name="projectType" class="form-select" required>
+                        <option value="">Select project type</option>
+                        <option value="construction">Construction</option>
+                        <option value="renovation">Renovation</option>
+                        <option value="interior">Interior Design</option>
+                        <option value="consulting">Consulting</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Budget (BDT)</label>
+                    <input type="number" name="budget" class="form-input" placeholder="e.g., 2000000" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="startDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Expected End Date</label>
+                    <input type="date" name="endDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Manager</label>
+                    <input type="text" name="projectManager" class="form-input" placeholder="e.g., John Doe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="low">Low</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" name="location" class="form-input" placeholder="e.g., Dhaka, Bangladesh">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" rows="3" placeholder="Brief project description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="on-hold">On Hold</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" id="projectSubmitBtn">
+                    Create Project
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div class="modal" id="transactionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">New Transaction</h3>
+                <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+            </div>
+            <form id="transactionForm" onsubmit="event.preventDefault(); handleTransactionSubmit(this);">
+                <div class="form-group">
+                    <label class="form-label">Transaction Date</label>
+                    <input type="date" name="date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Transaction Type</label>
+                    <select name="type" class="form-select" required onchange="toggleTransactionFields(this.value, 'transactionModal')">
+                        <option value="">Select transaction type</option>
+                        <option value="revenue">Revenue/Income</option>
+                        <option value="expense">Expense/Payment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select" required>
+                        <option value="">Select category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description/Particulars</label>
+                    <input type="text" name="description" class="form-input" placeholder="e.g., Received advance payment from client" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount (BDT)</label>
+                    <input type="number" name="amount" class="form-input" placeholder="e.g., 50000" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reference/Invoice Number</label>
+                    <input type="text" name="reference" class="form-input" placeholder="e.g., INV-2024-001">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Related Project</label>
+                    <select name="relatedProject" class="form-select">
+                        <option value="">Select project (optional)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: none;">
+                    <label class="form-label">Vendor/Supplier</label>
+                    <select name="vendor" class="form-select">
+                        <option value="">Select vendor (optional)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Method</label>
+                    <select name="paymentMethod" class="form-select">
+                        <option value="cash">Cash</option>
+                        <option value="bank">Bank Transfer</option>
+                        <option value="check">Check</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="online">Online Payment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-input" rows="2" placeholder="Additional notes or comments"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" id="transactionSubmitBtn">
+                    Add Transaction
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vendor Modal -->
+    <div class="modal" id="vendorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Vendor</h3>
+                <button class="modal-close" onclick="closeModal('vendorModal')">&times;</button>
+            </div>
+            <form id="vendorForm" onsubmit="event.preventDefault(); handleVendorSubmit(this);">
+                <div class="form-group">
+                    <label class="form-label">Vendor/Supplier Name</label>
+                    <input type="text" name="name" class="form-input" placeholder="e.g., ABC Construction Ltd." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vendor Type</label>
+                    <select name="vendorType" class="form-select" required>
+                        <option value="">Select vendor type</option>
+                        <option value="contractor">Contractor</option>
+                        <option value="supplier">Material Supplier</option>
+                        <option value="labor">Labor Provider</option>
+                        <option value="consultant">Consultant</option>
+                        <option value="service">Service Provider</option>
+                        <option value="equipment">Equipment Rental</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contract Amount (BDT)</label>
+                    <input type="number" name="contractAmount" class="form-input" placeholder="e.g., 200000" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Person</label>
+                    <input type="text" name="contact" class="form-input" placeholder="e.g., Mr. Rahman" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" name="phone" class="form-input" placeholder="e.g., +880171234567" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" class="form-input" placeholder="e.g., contact@vendor.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Business Address</label>
+                    <textarea name="address" class="form-input" rows="2" placeholder="Full business address"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trade License/Registration No.</label>
+                    <input type="text" name="tradeNumber" class="form-input" placeholder="e.g., TRAD/DSCC/123456">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">TIN Number</label>
+                    <input type="text" name="tinNumber" class="form-input" placeholder="e.g., 123456789012">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bank Account Details</label>
+                    <input type="text" name="bankDetails" class="form-input" placeholder="Bank name and account number">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Related Project</label>
+                    <select name="relatedProject" class="form-select">
+                        <option value="">Select project (optional)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Terms</label>
+                    <select name="paymentTerms" class="form-select">
+                        <option value="advance">Advance Payment</option>
+                        <option value="milestone">Milestone Based</option>
+                        <option value="completion">On Completion</option>
+                        <option value="net30">Net 30 Days</option>
+                        <option value="net15">Net 15 Days</option>
+                        <option value="cod">Cash on Delivery</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contract Start Date</label>
+                    <input type="date" name="contractStartDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contract End Date</label>
+                    <input type="date" name="contractEndDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-input" rows="3" placeholder="Additional information about the vendor"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" id="vendorSubmitBtn">
+                    Add Vendor
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Reusable) -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="editModalTitle">Edit Item</h3>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div id="editModalBody">
+                <!-- Dynamic form will be inserted here by JS -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirm Action</h3>
+                <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <p id="confirmModalMessage">Are you sure you want to proceed?</p>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
+                <button class="btn btn-danger" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-content">
+            <div id="toastMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- APPLICATION STATE & INITIAL DATA ---
+        let appState = {
+            currentPage: 'dashboard',
+            data: {
+                projects: [
+                    {
+                        id: 1, name: 'AKCL - Uttara Head Office', client: 'AKCL', budget: 2000000,
+                        status: 'active', startDate: '2024-12-01', projectType: 'renovation', 
+                        endDate: '', projectManager: 'Admin', priority: 'high',
+                        location: 'Uttara, Dhaka', description: 'Complete renovation of the head office.',
+                        createdAt: '2024-12-01T10:00:00Z'
+                    }
+                ],
+                transactions: [
+                    // REVENUE
+                    { id: 1, date: '2024-12-01', description: 'Received Amount', type: 'revenue', category: 'advance-payment', amount: 500000, relatedProject: 1, vendor: '', paymentMethod: 'bank'},
+                    { id: 2, date: '2025-01-01', description: 'Received Amount', type: 'revenue', category: 'project-payment', amount: 300000, relatedProject: 1, vendor: '', paymentMethod: 'bank'},
+                    { id: 3, date: '2025-02-01', description: 'Received Amount', type: 'revenue', category: 'project-payment', amount: 400000, relatedProject: 1, vendor: '', paymentMethod: 'bank'},
+                    { id: 4, date: '2025-03-01', description: 'Received Amount', type: 'revenue', category: 'project-payment', amount: 300000, relatedProject: 1, vendor: '', paymentMethod: 'bank'},
+                    { id: 5, date: '2025-06-01', description: 'Received Amount', type: 'revenue', category: 'project-payment', amount: 50000, relatedProject: 1, vendor: '', paymentMethod: 'bank'},
+                    // EXPENSES - VENDOR 1 (Material & Others)
+                    { id: 6, date: '2025-01-28', description: 'S.A Engineering Works Shop - Table Frame', type: 'expense', category: 'material-cost', amount: 25000, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    { id: 7, date: '2025-01-29', description: 'Board & Others Material Purchase', type: 'expense', category: 'material-cost', amount: 41517, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    { id: 8, date: '2025-01-31', description: 'Board & Others Material Purchase', type: 'expense', category: 'material-cost', amount: 294152, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    { id: 9, date: '2025-03-16', description: 'Indigo - Marble & Granite Purchase', type: 'expense', category: 'material-cost', amount: 74799, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    { id: 10, date: '2025-03-23', description: 'City Furnishers - Sofa Making Purpose', type: 'expense', category: 'professional-services', amount: 50000, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    { id: 11, date: '2025-03-25', description: 'Other Material Costs', type: 'expense', category: 'material-cost', amount: 342114, relatedProject: 1, vendor: 1, paymentMethod: 'cash'},
+                    // EXPENSES - VENDOR 2 (Prokash Mondol)
+                    { id: 12, date: '2025-01-22', description: 'Carpenter Labour Bill Advance', type: 'expense', category: 'labor-cost', amount: 10000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    { id: 13, date: '2025-01-29', description: 'Carpenter Labour Bill Advance', type: 'expense', category: 'labor-cost', amount: 20000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    { id: 14, date: '2025-02-16', description: 'Carpenter Labour Bill Advance', type: 'expense', category: 'labor-cost', amount: 35000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    { id: 15, date: '2025-03-27', description: 'Carpenter Labour Bill Advance', type: 'expense', category: 'labor-cost', amount: 30000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    { id: 16, date: '2025-06-04', description: 'Carpenter Labour Bill Advance', type: 'expense', category: 'labor-cost', amount: 20000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    { id: 17, date: '2025-06-10', description: 'Final Labor Payment', type: 'expense', category: 'labor-cost', amount: 48000, relatedProject: 1, vendor: 2, paymentMethod: 'cash'},
+                    // EXPENSES - VENDOR 3 (Tanvir Enterprise)
+                    { id: 18, date: '2025-01-30', description: 'Colour Purpose Advance', type: 'expense', category: 'material-cost', amount: 20000, relatedProject: 1, vendor: 3, paymentMethod: 'cash'},
+                    { id: 19, date: '2025-02-16', description: 'Colour Purpose Advance', type: 'expense', category: 'material-cost', amount: 30000, relatedProject: 1, vendor: 3, paymentMethod: 'cash'},
+                    { id: 20, date: '2025-02-27', description: 'Colour Purpose Advance', type: 'expense', category: 'material-cost', amount: 20000, relatedProject: 1, vendor: 3, paymentMethod: 'cash'},
+                    { id: 21, date: '2025-03-27', description: 'Colour Purpose Advance', type: 'expense', category: 'material-cost', amount: 30000, relatedProject: 1, vendor: 3, paymentMethod: 'cash'}
+                ],
+                vendors: [
+                    { id: 1, name: 'Material & Others', contractAmount: 1000000, status: 'active', contact: 'Various Suppliers', phone: 'Multiple', vendorType: 'supplier'},
+                    { id: 2, name: 'Prokash Mondol', contractAmount: 200000, status: 'active', contact: 'Prokash Mondol', phone: '+880171234567', vendorType: 'labor' },
+                    { id: 3, name: 'Tanvir Enterprise', contractAmount: 150000, status: 'active', contact: 'Tanvir Ahmed', phone: '+880181234567', vendorType: 'contractor' }
+                ]
+            },
+            nextId: { projects: 2, transactions: 22, vendors: 4 }
+        };
+
+        let activeCharts = {};
+        let activeToastTimeout = null;
+
+        // --- UTILITY FUNCTIONS ---
+        const formatCurrency = (amount) => '৳' + Number(amount).toLocaleString('en-IN');
+
+        const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+        };
+        
+        const getMonthYear = (dateString) => {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+            return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        };
+
+        const showToast = (message, type = 'success', options = {}) => {
+            const { duration = 4000, showSpinner = false } = options;
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastContent = toast.querySelector('.toast-content');
+
+            if (activeToastTimeout) clearTimeout(activeToastTimeout);
+            
+            const existingSpinner = toastContent.querySelector('.toast-spinner');
+            if (existingSpinner) existingSpinner.remove();
+
+            if (showSpinner) {
+                const spinner = document.createElement('div');
+                spinner.className = 'toast-spinner';
+                toastContent.prepend(spinner);
+            }
+
+            toast.className = `toast ${type} show`;
+            toastMessage.textContent = message;
+
+            if (duration > 0) {
+                activeToastTimeout = setTimeout(hideToast, duration);
+            }
+        };
+
+        const hideToast = () => {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('show');
+            if (activeToastTimeout) {
+                clearTimeout(activeToastTimeout);
+                activeToastTimeout = null;
+            }
+        };
+
+        // --- NAVIGATION & PAGE RENDERING ---
+        const initNavigation = () => {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetPage = link.getAttribute('data-page');
+                    document.querySelector('.nav-link.active')?.classList.remove('active');
+                    link.classList.add('active');
+                    document.querySelector('.page-section.active')?.classList.remove('active');
+                    document.getElementById(targetPage)?.classList.add('active');
+                    appState.currentPage = targetPage;
+                    
+                    // Close mobile sidebar after navigation
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('sidebar')?.classList.remove('active');
+                        document.getElementById('mobile-menu-btn')?.classList.remove('open');
+                    }
+                    
+                    renderAll();
+                });
+            });
+        };
+        
+        const renderAll = () => {
+            recalculateAllFinancials();
+            
+            switch(appState.currentPage) {
+                case 'dashboard': loadDashboard(); break;
+                case 'projects': loadProjects(); break;
+                case 'transactions': loadTransactions(); break;
+                case 'vendors': loadVendors(); break;
+                case 'reports': loadReports(); break;
+            }
+        };
+
+        // --- DATA RECALCULATION ---
+        const recalculateAllFinancials = () => {
+            appState.data.projects.forEach(p => p.spent = 0);
+            appState.data.vendors.forEach(v => {
+                v.totalPaid = 0;
+                v.details = [];
+            });
+            
+            appState.data.transactions.forEach(t => {
+                if (t.type === 'expense') {
+                    if (t.relatedProject) {
+                         const project = appState.data.projects.find(p => p.id == t.relatedProject);
+                         if(project) project.spent += t.amount;
+                    }
+                    if (t.vendor) {
+                        const vendor = appState.data.vendors.find(v => v.id == t.vendor);
+                        if(vendor) {
+                            vendor.totalPaid += t.amount;
+                            vendor.details.push({ date: t.date, description: t.description, amount: t.amount });
+                        }
+                    }
+                }
+            });
+
+            appState.data.vendors.forEach(v => {
+                v.balance = v.contractAmount - v.totalPaid;
+            });
+        };
+        
+        // --- UI RENDERING FUNCTIONS ---
+        const loadDashboard = () => {
+            const totalRevenue = appState.data.transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = appState.data.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const netProfit = totalRevenue - totalExpenses;
+            const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
+            const totalPayable = appState.data.vendors.reduce((sum, v) => sum + (v.balance > 0 ? v.balance : 0), 0);
+            
+            const totalBilled = appState.data.projects.reduce((sum, p) => sum + p.budget, 0);
+            const receivable = totalBilled - totalRevenue;
+            const finalProfit = netProfit + receivable - totalPayable;
+
+            document.getElementById('kpi-revenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('kpi-expenses').textContent = formatCurrency(totalExpenses);
+            document.getElementById('kpi-expense-percentage').textContent = totalRevenue > 0 ? `${((totalExpenses / totalRevenue) * 100).toFixed(0)}%` : '0%';
+            document.getElementById('kpi-net-profit').textContent = formatCurrency(netProfit);
+            document.getElementById('kpi-profit-margin').textContent = `${profitMargin}%`;
+            document.getElementById('kpi-payable').textContent = formatCurrency(totalPayable);
+            document.getElementById('kpi-receivable').textContent = formatCurrency(receivable);
+            document.getElementById('kpi-final-profit').textContent = formatCurrency(finalProfit);
+            
+            setTimeout(() => { 
+                initProfitChart();
+                initExpenseChart();
+                loadRecentActivity();
+                loadDashboardProjects(); 
+            }, 50);
+        };
+
+        const initProfitChart = () => {
+            const ctx = document.getElementById('profit-line-chart');
+            if (!ctx) return;
+            if(activeCharts.profit) {
+                activeCharts.profit.destroy();
+                delete activeCharts.profit;
+            }
+
+            const sortedTx = [...appState.data.transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
+            const monthly = {};
+            let cumulativeProfit = 0;
+
+            const monthOrder = [];
+            sortedTx.forEach(t => {
+                const month = getMonthYear(t.date);
+                if(!monthOrder.includes(month)) {
+                    monthOrder.push(month);
+                    monthly[month] = {revenue: 0, expense: 0};
+                }
+            });
+            
+            sortedTx.forEach(t => {
+                const month = getMonthYear(t.date);
+                if(t.type === 'revenue') monthly[month].revenue += t.amount;
+                else monthly[month].expense += t.amount;
+            });
+            
+            const labels = monthOrder;
+            const data = [];
+            
+            labels.forEach(month => {
+                cumulativeProfit += (monthly[month].revenue - monthly[month].expense);
+                data.push(cumulativeProfit);
+            });
+            
+            try {
+                activeCharts.profit = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Cumulative Profit',
+                            data: data,
+                            borderColor: 'var(--primary)',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error creating profit chart:', error);
+            }
+        };
+
+        const initExpenseChart = () => {
+            const ctx = document.getElementById('expense-donut-chart');
+            if (!ctx) return;
+            if(activeCharts.expense) {
+                activeCharts.expense.destroy();
+                delete activeCharts.expense;
+            }
+
+            const expenseData = {};
+            appState.data.transactions.filter(t => t.type === 'expense').forEach(t => {
+                const category = t.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                if(!expenseData[category]) expenseData[category] = 0;
+                expenseData[category] += t.amount;
+            });
+
+            const labels = Object.keys(expenseData);
+            const data = Object.values(expenseData);
+            
+            if (labels.length === 0) {
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                return;
+            }
+            
+            try {
+                activeCharts.expense = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Expenses',
+                            data: data,
+                            backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6'],
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error creating expense chart:', error);
+            }
+        };
+        
+        const loadRecentActivity = () => {
+            const feed = document.getElementById('recent-activity-feed');
+            if(!feed) return;
+            
+            const sortedTx = [...appState.data.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            feed.innerHTML = sortedTx.slice(0, 5).map(t => `
+                <div class="activity-item">
+                    <div>
+                        <div class="activity-desc">${t.description}</div>
+                        <div class="activity-date">${formatDate(t.date)}</div>
+                    </div>
+                    <div class="amount ${t.type === 'revenue' ? 'positive' : 'negative'}">
+                        ${t.type === 'expense' ? '-' : ''}${formatCurrency(t.amount)}
+                    </div>
+                </div>
+            `).join('') || '<div class="activity-item"><div class="activity-desc">No transactions yet</div></div>';
+        };
+
+        const loadDashboardProjects = () => {
+            const tbody = document.getElementById('dashboardProjectTable');
+            if (!tbody) return;
+            
+            const projectsToShow = appState.data.projects.slice(0, 5);
+            if (projectsToShow.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">No projects available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = projectsToShow.map(project => {
+                const progress = project.budget > 0 ? Math.min((project.spent / project.budget) * 100, 100) : 0;
+                let healthClass = 'health-green';
+                if (progress > 80 && progress <= 100) healthClass = 'health-yellow';
+                else if (progress > 100) healthClass = 'health-red';
+                
+                return `
+                    <tr>
+                        <td data-label="Project"><span class="health-dot ${healthClass}"></span>${project.name}</td>
+                        <td data-label="Budget" class="amount">${formatCurrency(project.budget)}</td>
+                        <td data-label="Spent" class="amount negative">${formatCurrency(project.spent)}</td>
+                        <td data-label="Progress"><div class="progress-bar"><div class="progress" style="width: ${progress.toFixed(1)}%"></div></div>${progress.toFixed(1)}%</td>
+                        <td data-label="Status"><span class="status-badge status-${project.status}">${project.status.toUpperCase()}</span></td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm btn-icon" onclick="editProject(${project.id})" title="Edit">✏️</button>
+                                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProject(${project.id})" title="Delete">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        };
+
+        const loadProjects = () => {
+            const tbody = document.getElementById('projectTableBody');
+            if (!tbody) return;
+            
+            if (appState.data.projects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--gray-500);">No projects available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = appState.data.projects.map(project => {
+                const progress = project.budget > 0 ? Math.min((project.spent / project.budget) * 100, 100).toFixed(1) : 0;
+                const remaining = project.budget - project.spent;
+                return `
+                    <tr>
+                        <td data-label="Project Name">
+                            <div>
+                                <strong>${project.name}</strong>
+                                <div style="font-size: 0.75rem; color: var(--gray-500); text-transform: capitalize;">${project.projectType || 'N/A'}</div>
+                            </div>
+                        </td>
+                        <td data-label="Client">${project.client}</td>
+                        <td data-label="Budget" class="amount">${formatCurrency(project.budget)}</td>
+                        <td data-label="Spent" class="amount negative">${formatCurrency(project.spent)}</td>
+                        <td data-label="Remaining" class="amount ${remaining >= 0 ? 'positive' : 'negative'}">${formatCurrency(remaining)}</td>
+                        <td data-label="Progress">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div class="progress-bar" style="flex: 1;">
+                                    <div class="progress" style="width: ${progress}%"></div>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--gray-600); min-width: 40px;">${progress}%</span>
+                            </div>
+                        </td>
+                        <td data-label="Status"><span class="status-badge status-${project.status}">${project.status.toUpperCase()}</span></td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm btn-icon" onclick="editProject(${project.id})" title="Edit">✏️</button>
+                                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProject(${project.id})" title="Delete">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        };
+
+        const loadTransactions = () => {
+            const tbody = document.getElementById('transactionTableBody');
+            if (!tbody) return;
+            
+            if (appState.data.transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">No transactions available</td></tr>';
+                return;
+            }
+            
+            const sortedTransactions = [...appState.data.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            tbody.innerHTML = sortedTransactions.map(t => {
+                const project = t.relatedProject ? appState.data.projects.find(p => p.id == t.relatedProject)?.name : '';
+                return `
+                    <tr>
+                        <td data-label="Date">${formatDate(t.date)}</td>
+                        <td data-label="Particulars">
+                            <div>
+                                <strong>${t.description}</strong>
+                                ${t.category ? `<div style="font-size: 0.75rem; color: var(--gray-500); text-transform: capitalize;">${t.category.replace(/-/g, ' ')}</div>` : ''}
+                                ${project ? `<div style="font-size: 0.75rem; color: var(--gray-500);">Project: ${project}</div>` : ''}
+                            </div>
+                        </td>
+                        <td data-label="Type"><span class="status-badge ${t.type === 'revenue' ? 'status-active' : 'status-pending'}">${t.type.toUpperCase()}</span></td>
+                        <td data-label="Reference">${t.reference || '-'}</td>
+                        <td data-label="Amount" class="amount ${t.type === 'revenue' ? 'positive' : 'negative'}">${formatCurrency(t.amount)}</td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm btn-icon" onclick="editTransaction(${t.id})" title="Edit">✏️</button>
+                                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteTransaction(${t.id})" title="Delete">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        };
+
+        const loadVendors = () => {
+            const tbody = document.getElementById('vendorTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (appState.data.vendors.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">No vendors available</td></tr>';
+                return;
+            }
+            
+            appState.data.vendors.forEach(vendor => {
+                const mainRow = document.createElement('tr');
+                mainRow.className = 'expandable-row';
+                mainRow.innerHTML = `
+                    <td data-label="Vendor Name">${vendor.name}</td>
+                    <td data-label="Contract Amount" class="amount">${formatCurrency(vendor.contractAmount)}</td>
+                    <td data-label="Total Paid" class="amount negative">${formatCurrency(vendor.totalPaid)}</td>
+                    <td data-label="Balance" class="amount ${vendor.balance >= 0 ? 'negative' : 'positive'}">${formatCurrency(vendor.balance)}</td>
+                    <td data-label="Status"><span class="status-badge status-${vendor.status}">${vendor.status.toUpperCase()}</span></td>
+                    <td data-label="Actions">
+                        <div class="action-buttons">
+                            <button class="btn btn-warning btn-sm btn-icon" onclick="event.stopPropagation(); editVendor(${vendor.id})" title="Edit">✏️</button>
+                            <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation(); deleteVendor(${vendor.id})" title="Delete">🗑️</button>
+                        </div>
+                    </td>`;
+                
+                mainRow.addEventListener('click', (e) => {
+                    if (e.target.closest('button')) return;
+                    mainRow.classList.toggle('expanded');
+                    const detailsRow = tbody.querySelector(`#vendor-details-${vendor.id}`);
+                    if (detailsRow) detailsRow.classList.toggle('show');
+                });
+
+                tbody.appendChild(mainRow);
+                const sortedDetails = [...vendor.details].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+                const detailsRow = document.createElement('tr');
+                detailsRow.className = 'vendor-details';
+                detailsRow.id = `vendor-details-${vendor.id}`;
+                detailsRow.innerHTML = `
+                    <td colspan="6">
+                        <div style="padding: 1rem; background: var(--gray-50);">
+                            <h5 style="margin-bottom: 1rem;">Payment History - ${sortedDetails.length} Transactions</h5>
+                            <div style="max-height: 200px; overflow-y: auto;">
+                                ${sortedDetails.map(d => `
+                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--gray-200);">
+                                        <span>${formatDate(d.date)}: ${d.description}</span>
+                                        <span class="amount negative">${formatCurrency(d.amount)}</span>
+                                    </div>
+                                `).join('') || '<p>No payment details recorded.</p>'}
+                            </div>
+                        </div>
+                    </td>`;
+                tbody.appendChild(detailsRow);
+            });
+        };
+        
+        const loadReports = () => {
+            const projectFilter = document.getElementById('repProject');
+            if (!projectFilter) return;
+            
+            const selectedProject = projectFilter.value;
+            projectFilter.innerHTML = '<option value="">All Projects</option>';
+            appState.data.projects.forEach(p => {
+                projectFilter.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+            projectFilter.value = selectedProject;
+
+            populateReportMonthFilter();
+            const transactions = getFilteredTransactions();
+            
+            // KPIs
+            const revenue = transactions.filter(t => t.type === 'revenue').reduce((s, t) => s + t.amount, 0);
+            const expenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+            const net = revenue - expenses;
+
+            const totalBilledAll = appState.data.projects.reduce((sum, p) => sum + p.budget, 0);
+            const totalRevenueAll = appState.data.transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0);
+            const receivable = totalBilledAll - totalRevenueAll;
+            const payable = appState.data.vendors.reduce((s, v) => s + (v.balance > 0 ? v.balance : 0), 0);
+            const finalProfit = net + receivable - payable;
+            
+            document.getElementById('rkpiRevenue').textContent = formatCurrency(revenue);
+            document.getElementById('rkpiExpenses').textContent = formatCurrency(expenses);
+            document.getElementById('rkpiNet').textContent = formatCurrency(net);
+            document.getElementById('rkpiAR').textContent = formatCurrency(receivable);
+            document.getElementById('rkpiAP').textContent = formatCurrency(payable);
+            document.getElementById('rkpiFinalProfit').textContent = formatCurrency(finalProfit);
+
+            // P&L Card
+            document.getElementById('plRevenue').textContent = formatCurrency(revenue);
+            document.getElementById('plExpenses').textContent = formatCurrency(expenses);
+            document.getElementById('plNet').textContent = formatCurrency(net);
+            document.getElementById('plNet').className = `report-value amount ${net >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('plMargin').textContent = revenue > 0 ? `${(net/revenue*100).toFixed(1)}%` : '0%';
+
+            // Project Profitability
+            const projProfit = {};
+            transactions.forEach(t => {
+                const pid = t.relatedProject || 'unassigned';
+                if (!projProfit[pid]) projProfit[pid] = { revenue: 0, expenses: 0 };
+                if (t.type === 'revenue') projProfit[pid].revenue += t.amount;
+                else projProfit[pid].expenses += t.amount;
+            });
+            const projProfitList = document.getElementById('projectProfitabilityList');
+            projProfitList.innerHTML = Object.entries(projProfit).map(([pid, data]) => {
+                const project = appState.data.projects.find(p => p.id == pid);
+                const name = project ? project.name : 'Unassigned';
+                const net = data.revenue - data.expenses;
+                return `<div class="report-item"><span class="report-label">${name}</span><span class="report-value amount ${net >= 0 ? 'positive' : 'negative'}">${formatCurrency(net)}</span></div>`;
+            }).join('') || '<p>No data for this period.</p>';
+            
+            // Vendor Exposure
+            const vendorExposureList = document.getElementById('vendorExposureList');
+            vendorExposureList.innerHTML = appState.data.vendors.filter(v => v.balance > 0).map(v => {
+                 return `<div class="report-item"><span class="report-label">${v.name}</span><span class="report-value amount negative">${formatCurrency(v.balance)}</span></div>`;
+            }).join('') || '<p>No outstanding payables.</p>';
+
+            // Cash Flow Card
+            document.getElementById('cfReceived').textContent = formatCurrency(revenue);
+            document.getElementById('cfPaid').textContent = formatCurrency(expenses);
+            const netCashFlow = revenue - expenses;
+            const cfNetFlowEl = document.getElementById('cfNetFlow');
+            cfNetFlowEl.textContent = formatCurrency(netCashFlow);
+            cfNetFlowEl.className = `report-value amount ${netCashFlow >= 0 ? 'positive' : 'negative'}`;
+
+            // Monthly Table
+            const monthly = {};
+            transactions.forEach(t => {
+                const month = getMonthYear(t.date);
+                if (!monthly[month]) monthly[month] = { revenue: 0, expenses: 0 };
+                if (t.type === 'revenue') monthly[month].revenue += t.amount;
+                else monthly[month].expenses += t.amount;
+            });
+            const monthlyTbl = document.getElementById('tblMonthly')?.querySelector('tbody');
+            if (monthlyTbl) {
+                monthlyTbl.innerHTML = Object.entries(monthly).map(([month, data]) => {
+                    const net = data.revenue - data.expenses;
+                    return `<tr><td>${month}</td><td class="amount positive">${formatCurrency(data.revenue)}</td><td class="amount negative">${formatCurrency(data.expenses)}</td><td class="amount ${net >= 0 ? 'positive' : 'negative'}">${formatCurrency(net)}</td></tr>`;
+                }).join('') || '<tr><td colspan="4" style="text-align: center; padding: 1rem;">No data available</td></tr>';
+            }
+
+            // Transaction Table
+            const txTbl = document.getElementById('tblTx')?.querySelector('tbody');
+            if (txTbl) {
+                if (transactions.length === 0) {
+                    txTbl.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 1rem;">No transactions match the filter criteria</td></tr>';
+                } else {
+                    txTbl.innerHTML = transactions.map(t => {
+                        const project = appState.data.projects.find(p => p.id == t.relatedProject)?.name || '-';
+                        const vendor = appState.data.vendors.find(v => v.id == t.vendor)?.name || '-';
+                        return `<tr>
+                            <td>${formatDate(t.date)}</td>
+                            <td>${t.type}</td>
+                            <td>${project}</td>
+                            <td>${vendor}</td>
+                            <td>${t.category.replace(/-/g,' ')}</td>
+                            <td>${t.description}</td>
+                            <td class="amount ${t.type === 'revenue' ? 'positive' : 'negative'}">${formatCurrency(t.amount)}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        };
+
+        const getFilteredTransactions = () => {
+            const from = document.getElementById('repFrom')?.value;
+            const to = document.getElementById('repTo')?.value;
+            const project = document.getElementById('repProject')?.value;
+            const type = document.getElementById('repType')?.value;
+            const month = document.getElementById('repMonth')?.value;
+            
+            let toDate = null;
+            if (to) {
+                toDate = new Date(to);
+                toDate.setHours(23, 59, 59, 999);
+            }
+
+            return appState.data.transactions.filter(t => {
+                const date = new Date(t.date);
+                if (from && date < new Date(from)) return false;
+                if (toDate && date > toDate) return false;
+                
+                if (month && getMonthYear(t.date) !== month) return false; 
+                if (project && t.relatedProject != project) return false;
+                if (type && t.type !== type) return false;
+                
+                return true;
+            });
+        };
+
+        const populateReportMonthFilter = () => {
+            const monthSelect = document.getElementById('repMonth');
+            if(!monthSelect) return;
+            const selectedMonth = monthSelect.value;
+
+            const months = new Set();
+            appState.data.transactions.forEach(t => {
+                const monthYear = getMonthYear(t.date);
+                months.add(monthYear);
+            });
+
+            const sortedMonths = Array.from(months).sort((a, b) => new Date(`01 ${b}`) - new Date(`01 ${a}`));
+
+            monthSelect.innerHTML = '<option value="">All Months</option>';
+            sortedMonths.forEach(month => {
+                monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+            });
+            
+            monthSelect.value = selectedMonth;
+        };
+
+        // --- MODAL & FORM HANDLING ---
+        const showModal = (modalId) => {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            
+            modal.classList.add('show');
+            const form = modal.querySelector('form');
+            if(form) form.reset();
+
+            const dateInput = modal.querySelector('input[name="date"], input[name="startDate"]');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+            
+            populateProjectOptions(modalId);
+            if (modalId === 'transactionModal') {
+                const typeSelect = modal.querySelector('select[name="type"]');
+                if (typeSelect) toggleTransactionFields(typeSelect.value, modalId);
+            }
+            
+            const firstInput = modal.querySelector('input:not([type=hidden]), select, textarea');
+            if (firstInput) setTimeout(() => firstInput.focus(), 100);
+        };
+
+        const closeModal = (modalId) => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+                const form = modal.querySelector('form');
+                if (form) form.reset();
+            }
+        };
+
+        const setFormLoading = (form, loading = true) => {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = loading;
+                if(loading) submitBtn.classList.add('loading');
+                else submitBtn.classList.remove('loading');
+            }
+        };
+
+        const toggleTransactionFields = (type, modalId) => {
+            const modal = document.getElementById(modalId);
+            if(!modal) return;
+            
+            const categorySelect = modal.querySelector('select[name="category"]');
+            const vendorGroup = modal.querySelector('select[name="vendor"]')?.parentNode;
+            
+            if (!categorySelect) return;
+            
+            const currentCategory = categorySelect.value;
+            categorySelect.innerHTML = '<option value="">Select category</option>';
+            
+            const categories = {
+                revenue: ['Project Payment', 'Advance Payment', 'Milestone Payment', 'Final Payment', 'Consultation Fee', 'Other Income'],
+                expense: ['Material Cost', 'Labor Cost', 'Equipment Rental', 'Transportation', 'Utilities', 'Professional Services', 'Permits & Licenses', 'Office Expenses', 'Other Expenses']
+            };
+            
+            if (type && categories[type]) {
+                categories[type].forEach(cat => {
+                    const optionValue = cat.toLowerCase().replace(/ /g, '-');
+                    const selected = optionValue === currentCategory ? 'selected' : '';
+                    categorySelect.innerHTML += `<option value="${optionValue}" ${selected}>${cat}</option>`;
+                });
+            }
+            
+            if (vendorGroup) {
+                vendorGroup.style.display = type === 'expense' ? 'block' : 'none';
+                if (type === 'expense') populateVendorSelect(modalId);
+            }
+        };
+
+        const populateProjectOptions = (modalId) => {
+            const selects = document.querySelectorAll(`#${modalId} select[name="relatedProject"]`);
+            selects.forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">Select project (optional)</option>';
+                appState.data.projects.forEach(p => {
+                    select.innerHTML += `<option value="${p.id}">${p.name} - ${p.client}</option>`;
+                });
+                select.value = currentVal;
+            });
+        };
+
+        const populateVendorSelect = (modalId) => {
+            const selects = document.querySelectorAll(`#${modalId} select[name="vendor"]`);
+            selects.forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">Select vendor (optional)</option>';
+                appState.data.vendors.forEach(v => {
+                    select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                });
+                select.value = currentVal;
+            });
+        };
+
+        // --- FORM SUBMISSION HANDLERS ---
+        const handleProjectSubmit = (form) => createOrUpdate('project', form);
+        const handleTransactionSubmit = (form) => createOrUpdate('transaction', form);
+        const handleVendorSubmit = (form) => createOrUpdate('vendor', form);
+
+        const createOrUpdate = (entityType, form) => {
+            setFormLoading(form, true);
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            setTimeout(() => {
+                try {
+                    const id = data.id ? parseInt(data.id) : null;
+                    const entityPlural = entityType + 's';
+
+                    if (id) {
+                        const existing = appState.data[entityPlural].find(e => e.id === id);
+                        if (existing) {
+                            Object.assign(existing, data);
+                            if (data.amount) existing.amount = parseInt(data.amount);
+                            if (data.budget) existing.budget = parseInt(data.budget);
+                            if (data.contractAmount) existing.contractAmount = parseInt(data.contractAmount);
+                        }
+                    } else {
+                        const newId = appState.nextId[entityPlural]++;
+                        const newEntity = { id: newId, createdAt: new Date().toISOString(), ...data };
+                        
+                        if(entityType === 'project') {
+                            newEntity.spent = 0;
+                            newEntity.budget = parseInt(data.budget);
+                        }
+                        if(entityType === 'transaction') {
+                            newEntity.amount = parseInt(data.amount);
+                        }
+                        if(entityType === 'vendor') {
+                            newEntity.totalPaid = 0;
+                            newEntity.contractAmount = parseInt(data.contractAmount);
+                            newEntity.balance = parseInt(data.contractAmount);
+                            newEntity.details = [];
+                            newEntity.status = 'active';
+                        }
+                        
+                        appState.data[entityPlural].push(newEntity);
+                    }
+                    
+                    showToast(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} ${id ? 'updated' : 'created'} successfully!`, 'success');
+                    closeModal(form.closest('.modal').id);
+                    renderAll();
+                } catch (e) {
+                    console.error(e);
+                    showToast(`An error occurred.`, 'error');
+                } finally {
+                    setFormLoading(form, false);
+                }
+            }, 500);
+        };
+        
+        // --- EDIT & DELETE OPERATIONS ---
+        const editProject = (id) => {
+            const project = appState.data.projects.find(p => p.id === id);
+            if (!project) return;
+            
+            document.getElementById('editModalTitle').textContent = 'Edit Project';
+            const originalForm = document.getElementById('projectModal').querySelector('form');
+            document.getElementById('editModalBody').innerHTML = originalForm.outerHTML;
+            
+            const form = document.getElementById('editModalBody').querySelector('form');
+            form.id = 'editProjectForm';
+            form.querySelector('button[type="submit"]').textContent = 'Update Project';
+            form.insertAdjacentHTML('afterbegin', `<input type="hidden" name="id" value="${project.id}">`);
+            
+            for (const key in project) {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = project[key];
+            }
+            
+            form.onsubmit = e => { e.preventDefault(); handleProjectSubmit(form); };
+            showModal('editModal');
+        };
+
+        const editTransaction = (id) => {
+            const transaction = appState.data.transactions.find(t => t.id === id);
+            if (!transaction) return;
+            
+            document.getElementById('editModalTitle').textContent = 'Edit Transaction';
+            const originalForm = document.getElementById('transactionModal').querySelector('form');
+            document.getElementById('editModalBody').innerHTML = originalForm.outerHTML;
+            
+            const form = document.getElementById('editModalBody').querySelector('form');
+            form.id = 'editTransactionForm';
+            form.querySelector('button[type="submit"]').textContent = 'Update Transaction';
+            form.insertAdjacentHTML('afterbegin', `<input type="hidden" name="id" value="${transaction.id}">`);
+            
+            for (const key in transaction) {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = transaction[key];
+            }
+            
+            const typeSelect = form.querySelector('select[name="type"]');
+            if (typeSelect) {
+                typeSelect.disabled = true;
+                toggleTransactionFields(transaction.type, 'editModal');
+            }
+            
+            populateProjectOptions('editModal');
+            if(transaction.type === 'expense') populateVendorSelect('editModal');
+            
+            const categorySelect = form.querySelector(`select[name="category"]`);
+            const projectSelect = form.querySelector(`select[name="relatedProject"]`);
+            const vendorSelect = form.querySelector(`select[name="vendor"]`);
+            
+            if (categorySelect) categorySelect.value = transaction.category;
+            if (projectSelect) projectSelect.value = transaction.relatedProject;
+            if (vendorSelect) vendorSelect.value = transaction.vendor;
+
+            form.onsubmit = e => { e.preventDefault(); handleTransactionSubmit(form); };
+            showModal('editModal');
+        };
+        
+        const editVendor = (id) => {
+            const vendor = appState.data.vendors.find(v => v.id === id);
+            if (!vendor) return;
+            
+            document.getElementById('editModalTitle').textContent = 'Edit Vendor';
+            const originalForm = document.getElementById('vendorModal').querySelector('form');
+            document.getElementById('editModalBody').innerHTML = originalForm.outerHTML;
+            
+            const form = document.getElementById('editModalBody').querySelector('form');
+            form.id = 'editVendorForm';
+            form.querySelector('button[type="submit"]').textContent = 'Update Vendor';
+            form.insertAdjacentHTML('afterbegin', `<input type="hidden" name="id" value="${vendor.id}">`);
+            
+            for (const key in vendor) {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = vendor[key];
+            }
+            
+            form.onsubmit = e => { e.preventDefault(); handleVendorSubmit(form); };
+            showModal('editModal');
+        };
+
+        const deleteProject = (id) => {
+            showConfirmModal('Delete project and all its transactions?', () => {
+                appState.data.projects = appState.data.projects.filter(p => p.id !== id);
+                appState.data.transactions = appState.data.transactions.filter(t => t.relatedProject != id);
+                showToast('Project deleted.', 'success');
+                renderAll();
+            });
+        };
+
+        const deleteTransaction = (id) => {
+            showConfirmModal('Delete this transaction?', () => {
+                appState.data.transactions = appState.data.transactions.filter(t => t.id !== id);
+                showToast('Transaction deleted.', 'success');
+                renderAll();
+            });
+        };
+
+        const deleteVendor = (id) => {
+            showConfirmModal('Delete this vendor? This will not delete their transactions.', () => {
+                appState.data.vendors = appState.data.vendors.filter(v => v.id !== id);
+                appState.data.transactions.forEach(t => { if(t.vendor == id) t.vendor = ''; });
+                showToast('Vendor deleted.', 'success');
+                renderAll();
+            });
+        };
+
+        // --- CLEAR ALL DATA FUNCTION ---
+        const clearAllData = () => {
+            showConfirmModal('⚠️ WARNING: This will permanently delete ALL data (projects, transactions, vendors). This action cannot be undone. Are you absolutely sure?', () => {
+                // Reset to initial empty state
+                appState.data = {
+                    projects: [],
+                    transactions: [],
+                    vendors: []
+                };
+                appState.nextId = { projects: 1, transactions: 1, vendors: 1 };
+                
+                // Clear charts
+                Object.values(activeCharts).forEach(chart => {
+                    if (chart && typeof chart.destroy === 'function') {
+                        chart.destroy();
+                    }
+                });
+                activeCharts = {};
+                
+                showToast('All data has been cleared successfully!', 'success');
+                renderAll();
+            });
+        };
+
+        // --- MISC & APP LIFECYCLE ---
+        const toggleMobileSidebar = (button) => { 
+            const sidebar = document.getElementById('sidebar');
+            sidebar?.classList.toggle('active');
+            button?.classList.toggle('open');
+        };
+
+        const refreshDashboard = () => { 
+            showToast('Dashboard refreshed!', 'success'); 
+            renderAll(); 
+        };
+        
+        // --- LOCAL STORAGE & DATA PERSISTENCE ---
+        const autoSave = () => {
+            try {
+                // Only use localStorage if available (browser environment)
+                if (typeof Storage !== 'undefined' && localStorage) {
+                    localStorage.setItem('pfm_data', JSON.stringify(appState));
+                    console.log('Data auto-saved.');
+                }
+            } catch (e) { 
+                console.warn('Auto-save not available:', e.message); 
+            }
+        };
+
+        const loadSavedData = () => {
+            try {
+                if (typeof Storage !== 'undefined' && localStorage) {
+                    const saved = localStorage.getItem('pfm_data');
+                    if (saved) {
+                        const parsedData = JSON.parse(saved);
+                        // Validate the structure before using
+                        if (parsedData && parsedData.data && parsedData.nextId) {
+                            appState = parsedData;
+                            console.log('Saved data loaded successfully.');
+                            showToast('Previous session data restored.', 'success');
+                        }
+                    }
+                }
+            } catch (e) { 
+                console.warn('No saved data or error loading:', e.message); 
+            }
+        };
+        
+        // --- CONFIRMATION MODAL ---
+        const showConfirmModal = (message, onConfirm) => {
+            const confirmModal = document.getElementById('confirmModal');
+            if (!confirmModal) return;
+            
+            document.getElementById('confirmModalMessage').textContent = message;
+
+            const okBtn = document.getElementById('confirmOkBtn');
+            const cancelBtn = document.getElementById('confirmCancelBtn');
+
+            const okClickHandler = () => { 
+                onConfirm(); 
+                closeModal('confirmModal'); 
+                cleanup(); 
+            };
+            const cancelClickHandler = () => { 
+                closeModal('confirmModal'); 
+                cleanup(); 
+            };
+            const cleanup = () => {
+                okBtn?.removeEventListener('click', okClickHandler);
+                cancelBtn?.removeEventListener('click', cancelClickHandler);
+            };
+
+            okBtn?.addEventListener('click', okClickHandler);
+            cancelBtn?.addEventListener('click', cancelClickHandler);
+
+            showModal('confirmModal');
+        };
+
+        const exportData = (format) => {
+            try {
+                const data = getFilteredTransactions();
+                const filename = `report_${new Date().toISOString().split('T')[0]}.${format}`;
+                let content = '';
+                let contentType = '';
+
+                if (format === 'json') {
+                    content = JSON.stringify(data, null, 2);
+                    contentType = 'application/json';
+                } else if (format === 'csv') {
+                    const headers = ['Date', 'Type', 'Project', 'Vendor', 'Category', 'Description', 'Amount'];
+                    const rows = data.map(t => {
+                        const project = appState.data.projects.find(p => p.id == t.relatedProject)?.name || '';
+                        const vendor = appState.data.vendors.find(v => v.id == t.vendor)?.name || '';
+                        const description = `"${t.description.replace(/"/g, '""')}"`;
+                        return [t.date, t.type, project, vendor, t.category, description, t.amount].join(',');
+                    });
+                    content = [headers.join(','), ...rows].join('\n');
+                    contentType = 'text/csv';
+                }
+
+                const blob = new Blob([content], { type: contentType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`Report exported as ${format.toUpperCase()}`, 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Export failed. Please try again.', 'error');
+            }
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('PFM System Initializing...');
+            
+            try {
+                loadSavedData();
+                initNavigation();
+                
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.addEventListener('click', function() { 
+                        toggleMobileSidebar(this); 
+                    });
+                }
+
+                // Modal event listeners
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.addEventListener('click', e => { 
+                        if (e.target === modal) closeModal(modal.id); 
+                    });
+                });
+                
+                // Escape key handling
+                document.addEventListener('keydown', e => {
+                    if (e.key === 'Escape') {
+                        document.querySelectorAll('.modal.show').forEach(m => closeModal(m.id));
+                    }
+                });
+                
+                // Report Filter Event Listeners
+                const reportElements = {
+                    applyBtn: document.getElementById('repApplyBtn'),
+                    exportCSV: document.getElementById('repExportCSV'),
+                    exportJSON: document.getElementById('repExportJSON'),
+                    preset: document.getElementById('repPreset'),
+                    month: document.getElementById('repMonth')
+                };
+
+                if (reportElements.applyBtn) {
+                    reportElements.applyBtn.addEventListener('click', loadReports);
+                }
+                if (reportElements.exportCSV) {
+                    reportElements.exportCSV.addEventListener('click', () => exportData('csv'));
+                }
+                if (reportElements.exportJSON) {
+                    reportElements.exportJSON.addEventListener('click', () => exportData('json'));
+                }
+                
+                if (reportElements.preset) {
+                    reportElements.preset.addEventListener('change', (e) => {
+                        const from = document.getElementById('repFrom');
+                        const to = document.getElementById('repTo');
+                        const month = document.getElementById('repMonth');
+                        const today = new Date(); 
+                        let startDate = new Date(today);
+
+                        switch(e.target.value) {
+                            case 'mtd': startDate = new Date(today.getFullYear(), today.getMonth(), 1); break;
+                            case 'qtd': startDate = new Date(today.getFullYear(), Math.floor(today.getMonth()/3)*3, 1); break;
+                            case 'ytd': startDate = new Date(today.getFullYear(), 0, 1); break;
+                            case 'last30': startDate.setDate(today.getDate() - 30); break;
+                            case 'last90': startDate.setDate(today.getDate() - 90); break;
+                            case 'fy': 
+                                startDate = new Date(today.getFullYear(), 6, 1); 
+                                if(today < startDate) startDate.setFullYear(today.getFullYear() - 1); 
+                                break;
+                            default: 
+                                if (from) from.value = ''; 
+                                if (to) to.value = ''; 
+                                return;
+                        }
+                        if (from) from.value = startDate.toISOString().split('T')[0];
+                        if (to) to.value = today.toISOString().split('T')[0];
+                        if (month) month.value = '';
+                    });
+                }
+                
+                if (reportElements.month) {
+                    reportElements.month.addEventListener('change', (e) => {
+                        const monthYear = e.target.value;
+                        const from = document.getElementById('repFrom');
+                        const to = document.getElementById('repTo');
+                        const preset = document.getElementById('repPreset');
+
+                        if (!monthYear) {
+                            if (from) from.value = '';
+                            if (to) to.value = '';
+                            return;
+                        }
+
+                        if (preset) preset.value = '';
+
+                        try {
+                            const date = new Date(`01 ${monthYear}`);
+                            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+                            if (from) from.value = firstDay.toISOString().split('T')[0];
+                            if (to) to.value = lastDay.toISOString().split('T')[0];
+                        } catch (error) {
+                            console.error('Date parsing error:', error);
+                        }
+                    });
+                }
+
+                // Clear preset/month when individual filters change
+                ['repFrom', 'repTo', 'repProject', 'repType'].forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.addEventListener('change', () => {
+                            const preset = document.getElementById('repPreset');
+                            const month = document.getElementById('repMonth');
+                            if (preset) preset.value = '';
+                            if (month) month.value = '';
+                        });
+                    }
+                });
+
+                renderAll();
+                
+                // Auto-save setup
+                if (typeof Storage !== 'undefined') {
+                    setInterval(autoSave, 30000);
+                    window.addEventListener('beforeunload', autoSave);
+                }
+                
+                showToast('Welcome to the PFM Enterprise System!', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('System initialization completed with some warnings. Check console for details.', 'warning');
+            }
+        });
+
+        // Make functions globally available
+        window.showModal = showModal;
+        window.closeModal = closeModal;
+        window.handleProjectSubmit = handleProjectSubmit;
+        window.handleTransactionSubmit = handleTransactionSubmit;
+        window.handleVendorSubmit = handleVendorSubmit;
+        window.toggleTransactionFields = toggleTransactionFields;
+        window.editProject = editProject;
+        window.editTransaction = editTransaction;
+        window.editVendor = editVendor;
+        window.deleteProject = deleteProject;
+        window.deleteTransaction = deleteTransaction;
+        window.deleteVendor = deleteVendor;
+        window.clearAllData = clearAllData;
+        window.refreshDashboard = refreshDashboard;
+    </script>
+</body>
+</html>
